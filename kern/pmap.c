@@ -61,7 +61,7 @@ i386_detect_memory(void)
 // --------------------------------------------------------------
 // Set up memory mappings above UTOP.
 // --------------------------------------------------------------
-
+static void	boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm);
 static void check_page_free_list(bool only_low_memory);
 static void check_page_alloc(void);
 static void check_kern_pgdir(void);
@@ -411,7 +411,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 // mapped pages.
 //
 // Hint: the TA solution uses pgdir_walk
-int
+static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
 	if(va%PGSIZE||pa%PGSIZE||size%PGSIZE)
@@ -422,13 +422,11 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 			*pte = pa | perm | PTE_P;
 		}
 		else
-			return -E_NO_MEM;
-			// panic("boot_map_region:page table can't be allocated!\n");
+			panic("boot_map_region:page table can't be allocated!\n");
 		va +=PGSIZE;
 		pa +=PGSIZE;	
 		size -= PGSIZE;
 	}
-	return 0;
 }
 
 //

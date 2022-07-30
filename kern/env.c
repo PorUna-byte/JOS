@@ -182,24 +182,8 @@ env_setup_vm(struct Env *e)
 	//    - The functions in kern/pmap.h are handy.
 
 	// LAB 3: Your code here.
-
-	if(boot_map_region(e->env_pgdir, UPAGES, PTSIZE, PADDR(pages), PTE_U)<0)
-		return -E_NO_MEM;
-
-	if(boot_map_region(e->env_pgdir, (uintptr_t)pages, PTSIZE, PADDR(pages), PTE_W)<0)
-		return -E_NO_MEM;
-
-	if(boot_map_region(e->env_pgdir,UENVS,sizeof(struct Env)*NENV,PADDR(envs),PTE_U|PTE_P)<0)
-		return -E_NO_MEM;
-
-	if(boot_map_region(e->env_pgdir,(uintptr_t)envs,sizeof(struct Env)*NENV,PADDR(envs),PTE_W|PTE_P)<0)
-		return -E_NO_MEM;
-
-	if(boot_map_region(e->env_pgdir, KSTACKTOP-KSTKSIZE, KSTKSIZE ,PADDR(bootstack), PTE_W)<0)
-		return -E_NO_MEM;
-
-	if(boot_map_region(e->env_pgdir, KERNBASE , 0x10000000, 0 , PTE_W)<0)
-		return -E_NO_MEM;
+	for(int i=PDX(UTOP);i<1024;i++)
+		e->env_pgdir[i]=kern_pgdir[i];
 
 	p->pp_ref++;
 
