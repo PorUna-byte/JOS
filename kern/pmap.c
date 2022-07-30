@@ -62,7 +62,6 @@ i386_detect_memory(void)
 // Set up memory mappings above UTOP.
 // --------------------------------------------------------------
 
-static void boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm);
 static void check_page_free_list(bool only_low_memory);
 static void check_page_alloc(void);
 static void check_kern_pgdir(void);
@@ -105,6 +104,8 @@ boot_alloc(uint32_t n)
 	// LAB 2: Your code here.
 	if((uint32_t)nextfree>=KERNBASE+(1<<22))
 		panic("boot_alloc virtual address out of memory(4MB)\n");
+	else if((uint32_t)nextfree<KERNBASE)
+		panic("boot_alloc virtual address is lower then KERNBASE\n");	
 	void *res=(void*)nextfree;
 
 	if(n>0)
@@ -158,7 +159,8 @@ mem_init(void)
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
-
+	envs=(struct Env*)boot_alloc(NENV*sizeof(struct Env));
+	memset(envs,0,NENV*sizeof(struct Env));
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
 	// up the list of free physical pages. Once we've done so, all further
@@ -189,7 +191,8 @@ mem_init(void)
 	//    - the new image at UENVS  -- kernel R, user R
 	//    - envs itself -- kernel RW, user NONE
 	// LAB 3: Your code here.
-
+	boot_map_region(kern_pgdir,UENVS,sizeof(struct Env)*NENV,PADDR(envs),PTE_U|PTE_P);
+	boot_map_region(kern_pgdir,(uintptr_t)envs,sizeof(struct Env)*NENV,PADDR(envs),PTE_W|PTE_P);
 	//////////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
 	// stack.  The kernel stack grows down from virtual address KSTACKTOP.
@@ -408,20 +411,24 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 // mapped pages.
 //
 // Hint: the TA solution uses pgdir_walk
-static void
+int
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
+	if(va%PGSIZE||pa%PGSIZE||size%PGSIZE)
+		panic("boot_map_region:address not page-aligned or size not multiple of PGSIZE!\n");
 	pte_t *pte;
 	while(size){
 		if((pte=pgdir_walk(pgdir,(void*)va,1))){
 			*pte = pa | perm | PTE_P;
 		}
 		else
-			panic("boot_map_region:page table can't be allocated!\n");
+			return -E_NO_MEM;
+			// panic("boot_map_region:page table can't be allocated!\n");
 		va +=PGSIZE;
 		pa +=PGSIZE;	
 		size -= PGSIZE;
 	}
+	return 0;
 }
 
 //
@@ -553,7 +560,15 @@ int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
-
+	uint32_t start=(uint32_t)ROUNDDOWN(va,PGSIZE);
+	uint32_t end=(uint32_t)ROUNDUP(va+len,PGSIZE);
+	pte_t *pte;
+	for(int i=0;start+i*PGSIZE<end;i++){
+		if(page_lookup(env->env_pgdir,(void*)(start+i*PGSIZE),&pte)==NULL||(*pte&perm)!=perm){
+			user_mem_check_addr=MAX(start+i*PGSIZE,(uint32_t)va);
+			return -E_FAULT;
+		}
+	}
 	return 0;
 }
 

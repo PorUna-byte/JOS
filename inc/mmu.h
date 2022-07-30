@@ -144,7 +144,6 @@
 	.word (((lim) >> 12) & 0xffff), ((base) & 0xffff);	\
 	.byte (((base) >> 16) & 0xff), (0x90 | (type)),		\
 		(0xC0 | (((lim) >> 28) & 0xf)), (((base) >> 24) & 0xff)
-
 #else	// not __ASSEMBLER__
 
 #include <inc/types.h>
@@ -203,6 +202,8 @@ struct Segdesc {
 #define STS_IG32	0xE	    // 32-bit Interrupt Gate
 #define STS_TG32	0xF	    // 32-bit Trap Gate
 
+#define DPL_USER 0x3
+#define DPL_KERNEL 0x0
 
 /*
  *
