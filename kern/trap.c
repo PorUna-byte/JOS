@@ -72,10 +72,12 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
-  for(int i = 0; i < 256; i++)
+  for(int i = 0; i <32; i++)
     SETGATE(idt[i], 0, GD_KT, vectors[i], 0);
   SETGATE(idt[T_SYSCALL], 0, GD_KT, vectors[T_SYSCALL], DPL_USER);
 	SETGATE(idt[T_BRKPT], 0, GD_KT, vectors[T_BRKPT], DPL_USER);
+	SETGATE(idt[IRQ_OFFSET+IRQ_TIMER], 0, GD_KT, vectors[IRQ_OFFSET+IRQ_TIMER], 0);
+	SETGATE(idt[IRQ_OFFSET+IRQ_SPURIOUS], 0, GD_KT, vectors[IRQ_OFFSET+IRQ_SPURIOUS], 0);
 	// Per-CPU setup 
 	trap_init_percpu();
 }
@@ -180,18 +182,19 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
-	if(tf->tf_trapno>254)
+	if(tf->tf_trapno>255)
 		return ;
+	//14
 	if(tf->tf_trapno==T_PGFLT){
 		page_fault_handler(tf);
 		return ;
 	}
-
+	//3
 	if(tf->tf_trapno==T_BRKPT){
 		monitor(tf);
 		return ;
 	}	
-
+	//48
 	if(tf->tf_trapno==T_SYSCALL){	
 		tf->tf_regs.reg_eax=(uint32_t)syscall(tf->tf_regs.reg_eax,tf->tf_regs.reg_edx,tf->tf_regs.reg_ecx,
 		tf->tf_regs.reg_ebx,tf->tf_regs.reg_edi,tf->tf_regs.reg_esi);
@@ -201,6 +204,7 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle spurious interrupts
 	// The hardware sometimes raises these because of noise on the
 	// IRQ line or other reasons. We don't care.
+	//39
 	if (tf->tf_trapno == IRQ_OFFSET + IRQ_SPURIOUS) {
 		cprintf("Spurious interrupt on irq 7\n");
 		print_trapframe(tf);
@@ -210,13 +214,18 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle clock interrupts. Don't forget to acknowledge the
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
-	while(tf->tf_trapno==IRQ_OFFSET+IRQ_TIMER){
+	//32
+	if(tf->tf_trapno==IRQ_OFFSET+IRQ_TIMER){
 		lapic_eoi();
 		sched_yield();
+		//will never return here to re-execute kernel-code though it 
+		//can be chosen by env_run() again but it will return to user-code directly
+		//(see pop_tf() function and recall what trapframe store?)
+		//NOT RETURN HERE!!!
 	}	
 	// Unexpected trap: The user process or the kernel has a bug.
 	// print_trapframe(tf);
-	// if (tf->tf_cs == GD_KT)
+	// if (tf->tf_cs == GD_KT&&tf->tf_trapno!=IRQ_OFFSET+IRQ_TIMER)
 	// 	panic("unhandled trap %d in kernel",tf->tf_trapno);
 	// else {
 	// 	env_destroy(curenv);

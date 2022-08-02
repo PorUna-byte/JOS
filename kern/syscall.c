@@ -347,6 +347,10 @@ sys_ipc_recv(void *dstva)
 	curenv->env_ipc_recving=1;
 	curenv->env_ipc_dstva=dstva;
 	sched_yield();
+	//JOS is a little different from other OS,it's much simplified for teaching!
+	//It only saves user-mode trapframe to restore user-mode execution
+	//But it will never save kernel-mode context to restore kernel-mode execution(see env_run(),it drops into user mode)
+	//will never comeback here
 }
 
 // Dispatches to the correct kernel function, passing the arguments.
