@@ -182,20 +182,21 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
-	if(tf->tf_trapno>255)
+	int trapno=(int)tf->tf_trapno;
+	if(trapno>255||trapno<0)
 		return ;
 	//14
-	if(tf->tf_trapno==T_PGFLT){
+	if(trapno==T_PGFLT){
 		page_fault_handler(tf);
 		return ;
 	}
 	//3
-	if(tf->tf_trapno==T_BRKPT){
+	if(trapno==T_BRKPT){
 		monitor(tf);
 		return ;
 	}	
 	//48
-	if(tf->tf_trapno==T_SYSCALL){	
+	if(trapno==T_SYSCALL){	
 		tf->tf_regs.reg_eax=(uint32_t)syscall(tf->tf_regs.reg_eax,tf->tf_regs.reg_edx,tf->tf_regs.reg_ecx,
 		tf->tf_regs.reg_ebx,tf->tf_regs.reg_edi,tf->tf_regs.reg_esi);
 		return ;
@@ -205,8 +206,9 @@ trap_dispatch(struct Trapframe *tf)
 	// The hardware sometimes raises these because of noise on the
 	// IRQ line or other reasons. We don't care.
 	//39
-	if (tf->tf_trapno == IRQ_OFFSET + IRQ_SPURIOUS) {
+	if (trapno == IRQ_OFFSET + IRQ_SPURIOUS) {
 		cprintf("Spurious interrupt on irq 7\n");
+		lapic_eoi();
 		print_trapframe(tf);
 		return;
 	}
@@ -215,23 +217,31 @@ trap_dispatch(struct Trapframe *tf)
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
 	//32
-	if(tf->tf_trapno==IRQ_OFFSET+IRQ_TIMER){
+	if(trapno==IRQ_OFFSET+IRQ_TIMER){
 		lapic_eoi();
 		sched_yield();
 		//will never return here to re-execute kernel-code though it 
 		//can be chosen by env_run() again but it will return to user-code directly
 		//(see pop_tf() function and recall what trapframe store?)
 		//NOT RETURN HERE!!!
+		return ; //Useless instruction
 	}	
+
 	// Unexpected trap: The user process or the kernel has a bug.
 	// print_trapframe(tf);
-	// if (tf->tf_cs == GD_KT&&tf->tf_trapno!=IRQ_OFFSET+IRQ_TIMER)
-	// 	panic("unhandled trap %d in kernel",tf->tf_trapno);
+	// if (tf->tf_cs == GD_KT)
+	// 	panic("unhandled trap %d in kernel\n",trapno);	
 	// else {
 	// 	env_destroy(curenv);
 	// 	return;
 	// }
-
+	// if (tf->tf_cs == GD_KT)
+	// 	cprintf("unhandled trap %d in kernel\n",trapno);
+	// else {
+	// 	// env_destroy(curenv);
+	// 	cprintf("unhandled trap %d in user\n",trapno);
+	// 	return;
+	// }
 }
 
 void
@@ -357,7 +367,7 @@ page_fault_handler(struct Trapframe *tf)
 	user_mem_assert(curenv,utrapframe,sizeof(struct UTrapframe),PTE_W|PTE_P);
 	//build the UTrapframe to where sp points to
 	utrapframe->utf_fault_va=fault_va;
-	utrapframe->utf_err=tf->tf_trapno;
+	utrapframe->utf_err=tf->tf_err;
 	utrapframe->utf_regs=tf->tf_regs;
 	utrapframe->utf_eip=tf->tf_eip;
 	utrapframe->utf_eflags=tf->tf_eflags;
