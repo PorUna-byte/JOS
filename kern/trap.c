@@ -72,12 +72,10 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
-  for(int i = 0; i <32; i++)
+  for(int i = 0; i <256; i++)
     SETGATE(idt[i], 0, GD_KT, vectors[i], 0);
   SETGATE(idt[T_SYSCALL], 0, GD_KT, vectors[T_SYSCALL], DPL_USER);
 	SETGATE(idt[T_BRKPT], 0, GD_KT, vectors[T_BRKPT], DPL_USER);
-	SETGATE(idt[IRQ_OFFSET+IRQ_TIMER], 0, GD_KT, vectors[IRQ_OFFSET+IRQ_TIMER], 0);
-	SETGATE(idt[IRQ_OFFSET+IRQ_SPURIOUS], 0, GD_KT, vectors[IRQ_OFFSET+IRQ_SPURIOUS], 0);
 	// Per-CPU setup 
 	trap_init_percpu();
 }
@@ -229,19 +227,26 @@ trap_dispatch(struct Trapframe *tf)
 
 	// Handle keyboard and serial interrupts.
 	// LAB 5: Your code here.
-
+	if(trapno==IRQ_OFFSET+IRQ_KBD){
+		kbd_intr();
+		return ;
+	}	
+	if(trapno==IRQ_OFFSET+IRQ_SERIAL){
+		serial_intr();
+		return ;
+	}
 	// Unexpected trap: The user process or the kernel has a bug.
-	// print_trapframe(tf);
-	// if (tf->tf_cs == GD_KT)
-	// 	panic("unhandled trap %d in kernel\n",trapno);	
-	// else {
-	// 	env_destroy(curenv);
-	// 	return;
-	// }
+	print_trapframe(tf);
+	if (tf->tf_cs == GD_KT)
+		panic("unhandled trap %d in kernel\n",trapno);	
+	else {
+		env_destroy(curenv);
+		return;
+	}
 	// if (tf->tf_cs == GD_KT)
 	// 	cprintf("unhandled trap %d in kernel\n",trapno);
 	// else {
-	// 	// env_destroy(curenv);
+	// 	env_destroy(curenv);
 	// 	cprintf("unhandled trap %d in user\n",trapno);
 	// 	return;
 	// }

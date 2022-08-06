@@ -132,7 +132,15 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 	// LAB 5: Your code here.
 	// Remember to check whether the user has supplied us with a good
 	// address!
-	panic("sys_env_set_trapframe not implemented");
+	struct Env* env;
+	int r;
+	if((r=envid2env(envid,&env,1))<0)
+		return r;
+	tf->tf_eflags &= ~FL_IOPL_3;	
+	tf->tf_eflags |=FL_IF;
+	tf->tf_cs |= 3;
+	env->env_tf=*tf;
+	return 0;	
 }
 
 // Set the page fault upcall for 'envid' by modifying the corresponding struct
@@ -156,6 +164,9 @@ sys_env_set_pgfault_upcall(envid_t envid, void *func)
 	return 0;	
 }
 
+static bool appropriate(int perm){
+	return (perm|PTE_SYSCALL)==PTE_SYSCALL&&(perm&PTE_U)&&(perm&PTE_P);
+}
 // Allocate a page of memory and map it at 'va' with permission
 // 'perm' in the address space of 'envid'.
 // The page's contents are set to 0.
@@ -172,9 +183,6 @@ sys_env_set_pgfault_upcall(envid_t envid, void *func)
 //	-E_INVAL if perm is inappropriate (see above).
 //	-E_NO_MEM if there's no memory to allocate the new page,
 //		or to allocate any necessary page tables.
-static bool appropriate(int perm){
-	return (perm|PTE_SYSCALL)==PTE_SYSCALL&&(perm&PTE_U)&&(perm&PTE_P);
-}
 static int
 sys_page_alloc(envid_t envid, void *va, int perm)
 {
@@ -396,6 +404,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_exofork();
 	case SYS_env_set_status:
 		return sys_env_set_status(a1,(int)a2);
+	case SYS_env_set_trapframe:
+		return sys_env_set_trapframe(a1,(struct Trapframe*)a2);
 	case SYS_env_set_pgfault_upcall:
 		return sys_env_set_pgfault_upcall(a1,(void*)a2);
 	case SYS_yield:

@@ -58,7 +58,11 @@ duppage(envid_t envid, unsigned pn)
 {
 	int r;
 	// LAB 4: Your code here.
-	if((uvpt[pn]&(PTE_W|PTE_COW))){
+	if(uvpt[pn]&PTE_SHARE){
+		if(sys_page_map(sys_getenvid(),(void*)(pn*PGSIZE),envid,(void*)(pn*PGSIZE),uvpt[pn]&PTE_SYSCALL)<0)
+			panic("Fail to map env %x to env %x at address %x\n",sys_getenvid(),envid,pn*PGSIZE);
+	}
+	else if((uvpt[pn]&(PTE_W|PTE_COW))){
 		if(sys_page_map(sys_getenvid(),(void*)(pn*PGSIZE),envid,(void*)(pn*PGSIZE),PTE_COW|PTE_U|PTE_P)<0)
 			panic("Fail to map env %x to env %x at address %x\n",sys_getenvid(),envid,pn*PGSIZE);
 		if(sys_page_map(sys_getenvid(),(void*)(pn*PGSIZE),sys_getenvid(),(void*)(pn*PGSIZE),PTE_COW|PTE_U|PTE_P)<0)
@@ -66,7 +70,7 @@ duppage(envid_t envid, unsigned pn)
 	}
 	else if(sys_page_map(sys_getenvid(),(void*)(pn*PGSIZE),envid,(void*)(pn*PGSIZE),uvpt[pn]&PTE_SYSCALL)<0)
 			panic("Fail to map env %x to env %x at address %x\n",sys_getenvid(),envid,pn*PGSIZE);
-
+	
 	return 0;
 }
 

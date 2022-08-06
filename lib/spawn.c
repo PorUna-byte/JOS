@@ -302,6 +302,19 @@ static int
 copy_shared_pages(envid_t child)
 {
 	// LAB 5: Your code here.
+	for(int pdx=0;pdx<PDX(UTOP);pdx++){
+		if(uvpd[pdx]&PTE_P){
+			//page-table exist
+			for(int ptx=0;ptx<1024;ptx++){
+				uint32_t pn=pdx*1024+ptx;
+				if(pn!=PGNUM(UXSTACKTOP-PGSIZE)&&(uvpt[pn]&PTE_P)&&(uvpt[pn]&PTE_SHARE)){
+					//page exist,shared and not UXSTACK
+					if(sys_page_map(sys_getenvid(),(void*)(pn*PGSIZE),child,(void*)(pn*PGSIZE),uvpt[pn]&PTE_SYSCALL)<0)
+						panic("Fail to map env %x to env %x at address %x\n",sys_getenvid(),child,pn*PGSIZE);
+				}
+			}
+		}
+	}
 	return 0;
 }
 

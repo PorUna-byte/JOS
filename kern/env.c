@@ -296,8 +296,6 @@ region_alloc(struct Env *e, void *va, size_t len)
 		if(page_insert(e->env_pgdir,page,(void*)(start+i*PGSIZE),PTE_U|PTE_W)<0)
 			panic("region_alloc:No pyhsical page\n");
 	}
-	// pte_t pte =*pgdir_walk(e->env_pgdir,(void*)0x200000,0);	
-	// cprintf("%x\n",pte);
 }
 
 //
@@ -399,7 +397,8 @@ env_create(uint8_t *binary, enum EnvType type)
 	env->env_type=type;	
 	// If this is the file server (type == ENV_TYPE_FS) give it I/O privileges.
 	// LAB 5: Your code here.
-
+	if(type==ENV_TYPE_FS)
+		env->env_tf.tf_eflags |= FL_IOPL_3;
 }
 
 //
