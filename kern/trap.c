@@ -218,6 +218,7 @@ trap_dispatch(struct Trapframe *tf)
 	//32
 	if(trapno==IRQ_OFFSET+IRQ_TIMER){
 		lapic_eoi();
+		time_tick();
 		sched_yield();
 		//will never return here to re-execute kernel-code though it 
 		//can be chosen by env_run() again but it will return to user-code directly
