@@ -235,13 +235,6 @@ trap_dispatch(struct Trapframe *tf)
 	// 	env_destroy(curenv);
 	// 	return;
 	// }
-	// if (tf->tf_cs == GD_KT)
-	// 	cprintf("unhandled trap %d in kernel\n",trapno);
-	// else {
-	// 	// env_destroy(curenv);
-	// 	cprintf("unhandled trap %d in user\n",trapno);
-	// 	return;
-	// }
 }
 
 void
