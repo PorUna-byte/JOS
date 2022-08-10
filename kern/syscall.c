@@ -382,6 +382,20 @@ sys_time_msec(void)
 	return time_msec();
 }
 
+extern int e1000_transmit(char* data,uint16_t length);
+static int 
+sys_packet_send(char* data,uint16_t length){
+	user_mem_assert(curenv,data,length,PTE_P|PTE_U);
+	return e1000_transmit(data,length);
+}
+
+extern int e1000_receive(char*buf);
+static int
+sys_packet_recv(char* buf){
+	user_mem_assert(curenv,buf,2048,PTE_P|PTE_U);
+	return e1000_receive(buf);
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -426,6 +440,10 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_ipc_recv((void*)a1);				
 	case SYS_time_msec:
 		return sys_time_msec();	
+	case SYS_packet_send:
+		return sys_packet_send((char*)a1,(uint16_t)a2);
+	case SYS_packet_recv:
+		return sys_packet_recv((char*)a1);	
 	default:
 		return -E_INVAL;
 	}

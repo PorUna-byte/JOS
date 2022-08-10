@@ -11,7 +11,6 @@
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
 #include <kern/trap.h>
-
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
 
@@ -119,7 +118,7 @@ runcmd(char *buf, struct Trapframe *tf)
 	cprintf("Unknown command '%s'\n", argv[0]);
 	return 0;
 }
-
+extern int e1000_transmit(char*,uint16_t);
 void
 monitor(struct Trapframe *tf)
 {
@@ -132,6 +131,7 @@ monitor(struct Trapframe *tf)
 		print_trapframe(tf);
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
+	// e1000_transmit("hello world!\n",14);
 	while (1) {
 		buf = readline("K> ");
 		if (buf != NULL)
